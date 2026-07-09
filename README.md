@@ -124,5 +124,61 @@ Connection: keep-alive\r\n
   ]
 }
 ```
-  
-  
+
+---
+
+# 💪 筋トレ記録アプリ
+
+上でまとめた HTTP の知識（HTTPメソッド・ステータスコード・クエリ文字列・パスパラメータ・JSON）を実際に使って作った Web アプリです。
+
+## 機能
+
+- **記録する**: 種目・重量・回数・セット数を日付ごとに記録（編集・削除もできる）
+- **履歴**: 過去のトレーニングを日付ごとに一覧表示
+- **グラフ**: 種目を選ぶと「最大重量」と「総ボリューム（重量×回数×セット）」の推移を折れ線グラフで表示
+- **体重**: 体重の記録と推移グラフ
+
+## 使い方
+
+```bash
+npm install   # 初回のみ
+npm start     # サーバー起動
+```
+
+起動したらブラウザで http://localhost:3000 を開きます。
+データは `data/` フォルダの JSON ファイルに保存されます。
+
+## 技術構成
+
+- サーバー: Node.js + Express（`server.js`）
+- フロントエンド: 素の HTML / CSS / JavaScript（`public/`）。グラフは Canvas API で自前描画
+- データ保存: JSON ファイル（`data/workouts.json`, `data/weights.json`）
+
+## API 仕様（学習メモとの対応）
+
+| メソッド | パス | 役割 | 返すステータスコード |
+|---|---|---|---|
+| GET | `/api/workouts` | 記録一覧の取得。**クエリ文字列** `?date=YYYY-MM-DD` や `?exercise=種目名` で絞り込みできる | 200 |
+| POST | `/api/workouts` | 記録の追加（リクエストボディに JSON を入れて送る） | 201 / 400 |
+| PUT | `/api/workouts/:id` | **パスパラメータ** `:id` で指定した記録をまるごと置き換えて更新 | 200 / 400 / 404 |
+| DELETE | `/api/workouts/:id` | 記録の削除 | 200 / 404 |
+| GET | `/api/weights` | 体重記録の一覧取得 | 200 |
+| POST | `/api/weights` | 体重の追加（同じ日付があれば上書き） | 201 / 400 |
+| DELETE | `/api/weights/:date` | 指定した日付の体重記録を削除 | 200 / 404 |
+
+- **201**: リソースの作成に成功したとき（POST）
+- **400**: 入力内容に問題があるとき（バリデーションエラー）
+- **404**: 指定した ID・日付の記録が見つからないとき
+
+`curl` での動作確認の例:
+
+```bash
+# 記録を追加（POST → 201）
+curl -X POST http://localhost:3000/api/workouts \
+  -H 'Content-Type: application/json' \
+  -d '{"date":"2026-07-09","exercise":"ベンチプレス","weight":60,"reps":10,"sets":3}'
+
+# クエリ文字列で日付を絞り込んで取得（GET → 200）
+curl 'http://localhost:3000/api/workouts?date=2026-07-09'
+```
+

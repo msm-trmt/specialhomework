@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>筋トレ記録</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💪</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>💪 筋トレ記録</h1>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-button active" data-tab="record">記録する</button>
+    <button class="tab-button" data-tab="history">履歴</button>
+    <button class="tab-button" data-tab="graph">グラフ</button>
+    <button class="tab-button" data-tab="weight">体重</button>
+  </nav>
+
+  <main>
+    <!-- 記録タブ -->
+    <section id="tab-record" class="tab-panel active">
+      <form id="workout-form" class="card">
+        <h2 id="workout-form-title">今日のトレーニングを記録</h2>
+        <div class="form-row">
+          <label for="workout-date">日付</label>
+          <input type="date" id="workout-date" required>
+        </div>
+        <div class="form-row">
+          <label for="workout-exercise">種目</label>
+          <input type="text" id="workout-exercise" list="exercise-list"
+                 placeholder="例: ベンチプレス" required>
+          <datalist id="exercise-list"></datalist>
+        </div>
+        <div class="form-row form-row-3">
+          <div>
+            <label for="workout-weight">重量 (kg)</label>
+            <input type="number" id="workout-weight" min="0" step="0.5" placeholder="60" required>
+          </div>
+          <div>
+            <label for="workout-reps">回数</label>
+            <input type="number" id="workout-reps" min="1" step="1" placeholder="10" required>
+          </div>
+          <div>
+            <label for="workout-sets">セット数</label>
+            <input type="number" id="workout-sets" min="1" step="1" placeholder="3" required>
+          </div>
+        </div>
+        <p id="workout-form-error" class="form-error" hidden></p>
+        <div class="form-actions">
+          <button type="submit" class="primary" id="workout-submit">記録する</button>
+          <button type="button" id="workout-cancel-edit" hidden>編集をやめる</button>
+        </div>
+      </form>
+
+      <div class="card">
+        <h2>この日の記録</h2>
+        <div id="today-list" class="workout-list"></div>
+      </div>
+    </section>
+
+    <!-- 履歴タブ -->
+    <section id="tab-history" class="tab-panel">
+      <div class="card">
+        <h2>トレーニング履歴</h2>
+        <div id="history-list"></div>
+      </div>
+    </section>
+
+    <!-- グラフタブ -->
+    <section id="tab-graph" class="tab-panel">
+      <div class="card">
+        <h2>種目ごとの推移</h2>
+        <div class="form-row">
+          <label for="graph-exercise">種目を選ぶ</label>
+          <select id="graph-exercise"></select>
+        </div>
+        <div class="chart-block">
+          <h3>最大重量 (kg)</h3>
+          <div class="chart-wrap"><canvas id="chart-max-weight"></canvas></div>
+        </div>
+        <div class="chart-block">
+          <h3>総ボリューム (重量 × 回数 × セット, kg)</h3>
+          <div class="chart-wrap"><canvas id="chart-volume"></canvas></div>
+        </div>
+        <p id="graph-empty" class="empty-note" hidden>まだ記録がありません。「記録する」タブから追加してみましょう。</p>
+      </div>
+    </section>
+
+    <!-- 体重タブ -->
+    <section id="tab-weight" class="tab-panel">
+      <form id="weight-form" class="card">
+        <h2>体重を記録</h2>
+        <div class="form-row form-row-2">
+          <div>
+            <label for="weight-date">日付</label>
+            <input type="date" id="weight-date" required>
+          </div>
+          <div>
+            <label for="weight-value">体重 (kg)</label>
+            <input type="number" id="weight-value" min="1" step="0.1" placeholder="65.0" required>
+          </div>
+        </div>
+        <p id="weight-form-error" class="form-error" hidden></p>
+        <div class="form-actions">
+          <button type="submit" class="primary">記録する</button>
+        </div>
+      </form>
+
+      <div class="card">
+        <h2>体重の推移 (kg)</h2>
+        <div class="chart-wrap"><canvas id="chart-body-weight"></canvas></div>
+        <p id="weight-empty" class="empty-note" hidden>まだ体重の記録がありません。</p>
+        <div id="weight-list" class="weight-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="chart-tooltip" class="chart-tooltip" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
