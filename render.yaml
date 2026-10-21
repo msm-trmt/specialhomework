@@ -1,0 +1,22 @@
+# Render (https://render.com) の Blueprint 設定ファイル
+# Render の「New → Blueprint」でこのリポジトリを選ぶと、この内容でサーバーが作られる
+services:
+  - type: web
+    name: workout-tracker
+    runtime: node
+    plan: free
+    region: singapore # 日本から近いリージョン
+    buildCommand: npm ci
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Neon の接続文字列（作成時に Render の画面で入力する）
+      - key: DATABASE_URL
+        sync: false
+      # ログインパスワード（作成時に Render の画面で入力する）
+      - key: APP_PASSWORD
+        sync: false
+      # Cookie の署名に使う秘密の鍵（Render が自動でランダムな値を作る）
+      - key: SESSION_SECRET
+        generateValue: true
