@@ -1,0 +1,269 @@
+/* 筋トレ記録アプリのスタイル */
+
+:root {
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --gridline: #e1e0d9;
+  --baseline: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.10);
+  --series-1: #2a78d6;
+  --danger: #d03b3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --gridline: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --series-1: #3987e5;
+    --danger: #e66767;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  background: var(--page);
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.app-header {
+  padding: 16px;
+  text-align: center;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+/* タブ */
+.tabs {
+  display: flex;
+  gap: 4px;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 12px;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 10px 4px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.tab-button.active {
+  background: var(--surface);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.card h2 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+
+.card h3 {
+  margin: 16px 0 8px;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+/* フォーム */
+.form-row {
+  margin-bottom: 12px;
+}
+
+.form-row label,
+.form-row-2 label,
+.form-row-3 label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.form-row-2,
+.form-row-3 {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.form-row-2 { grid-template-columns: 1fr 1fr; }
+.form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+input, select {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 1rem;
+  border: 1px solid var(--baseline);
+  border-radius: 8px;
+  background: var(--page);
+  color: var(--text-primary);
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  padding: 10px 16px;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--series-1);
+  border-color: var(--series-1);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: 0.9rem;
+  margin: 0 0 12px;
+}
+
+/* 記録一覧 */
+.workout-list, .weight-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.workout-item, .weight-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.workout-item .exercise {
+  font-weight: 600;
+  flex: 1;
+}
+
+.workout-item .detail, .weight-item .detail {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.weight-item .date {
+  flex: 1;
+}
+
+.item-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.item-buttons button {
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+.item-buttons .delete {
+  color: var(--danger);
+}
+
+.history-date {
+  margin: 16px 0 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--gridline);
+  padding-bottom: 4px;
+}
+
+.history-date:first-child {
+  margin-top: 0;
+}
+
+.empty-note {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* グラフ */
+.chart-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.chart-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 220px;
+}
+
+.chart-tooltip {
+  position: fixed;
+  z-index: 10;
+  pointer-events: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+}
+
+.chart-tooltip .tip-date {
+  color: var(--text-secondary);
+}
+
+.chart-tooltip .tip-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
