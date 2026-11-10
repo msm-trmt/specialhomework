@@ -13,15 +13,69 @@ function todayString() {
   return `${y}-${m}-${d}`;
 }
 
-// APIを呼んで、エラーレスポンス(400/404など)は例外にする
+// APIを呼んで、エラーレスポンス(400/404など)は例外にする。
+// 401 (ログインしていない) が返ってきたらログイン画面に切り替える
 async function api(path, options) {
   const res = await fetch(path, options);
   const body = await res.json().catch(() => ({}));
+  if (res.status === 401 && path !== '/api/login') {
+    showLogin();
+  }
   if (!res.ok) {
     throw new Error(body.error || `エラーが発生しました (${res.status})`);
   }
   return body;
 }
+
+function sendJson(path, method, data) {
+  return api(path, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+// ---- ログイン ----
+
+const loginView = $('#login-view');
+const appView = $('#app-view');
+const loginError = $('#login-error');
+const logoutButton = $('#logout-button');
+let authRequired = false;
+
+function showLogin() {
+  appView.hidden = true;
+  loginView.hidden = false;
+  logoutButton.hidden = true;
+  hideTooltip();
+  $('#login-password').focus();
+}
+
+function showApp() {
+  loginView.hidden = true;
+  appView.hidden = false;
+  logoutButton.hidden = !authRequired;
+  renderTodayList();
+  refreshExerciseList();
+}
+
+$('#login-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  loginError.hidden = true;
+  try {
+    await sendJson('/api/login', 'POST', { password: $('#login-password').value });
+    $('#login-password').value = '';
+    showApp();
+  } catch (err) {
+    loginError.textContent = err.message;
+    loginError.hidden = false;
+  }
+});
+
+logoutButton.addEventListener('click', async () => {
+  await api('/api/logout', { method: 'POST' });
+  showLogin();
+});
 
 // ---- タブ切り替え ----
 
@@ -31,6 +85,7 @@ document.querySelectorAll('.tab-button').forEach((button) => {
     document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
     button.classList.add('active');
     $(`#tab-${button.dataset.tab}`).classList.add('active');
+    hideTooltip();
     // タブを開いたタイミングで表示を最新化する
     if (button.dataset.tab === 'history') renderHistory();
     if (button.dataset.tab === 'graph') renderGraphTab();
@@ -62,17 +117,9 @@ workoutForm.addEventListener('submit', async (event) => {
 
   try {
     if (editingId === null) {
-      await api('/api/workouts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      await sendJson('/api/workouts', 'POST', payload);
     } else {
-      await api(`/api/workouts/${editingId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      await sendJson(`/api/workouts/${editingId}`, 'PUT', payload);
     }
     stopEditing();
     $('#workout-exercise').value = '';
@@ -225,10 +272,23 @@ async function renderHistory() {
 
 // ---- グラフ描画（Canvas 手描きの折れ線グラフ）----
 
-const chartStates = new Map(); // canvas ごとのホバー用データ
+const chartStates = new Map(); // canvas ごとのツールチップ用データ
 
 function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+// 目盛りが 60, 65, 70 のようなキリのいい数字になるよう、軸の範囲と間隔を決める
+function niceScale(lo, hi, tickCount) {
+  if (lo === hi) {
+    // 値が1種類だけのときは上下に幅を持たせる
+    lo -= 1;
+    hi += 1;
+  }
+  const rough = (hi - lo) / tickCount;
+  const magnitude = 10 ** Math.floor(Math.log10(rough));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * magnitude).find((s) => s >= rough);
+  return { min: Math.floor(lo / step) * step, max: Math.ceil(hi / step) * step, step };
 }
 
 // points: [{ date, value }] を折れ線で描く
@@ -254,16 +314,8 @@ function drawLineChart(canvas, points, unit) {
   }
 
   const values = points.map((p) => p.value);
-  let min = Math.min(...values);
-  let max = Math.max(...values);
-  if (min === max) {
-    // 値が1種類だけのときは上下に幅を持たせる
-    min -= 1;
-    max += 1;
-  }
-  const range = max - min;
-  min -= range * 0.1;
-  max += range * 0.1;
+  const gridCount = 4;
+  const { min, max, step } = niceScale(Math.min(...values), Math.max(...values), gridCount);
 
   const xAt = (i) =>
     padding.left + (points.length === 1 ? plotWidth / 2 : (plotWidth * i) / (points.length - 1));
@@ -274,11 +326,8 @@ function drawLineChart(canvas, points, unit) {
   ctx.fillStyle = cssVar('--text-muted');
   ctx.font = '11px system-ui, sans-serif';
   ctx.lineWidth = 1;
-  const gridCount = 4;
-  // 値の幅が狭いときは整数に丸めるとラベルが重複するので小数1桁にする
-  const decimals = max - min < gridCount ? 1 : 0;
-  for (let g = 0; g <= gridCount; g++) {
-    const value = min + ((max - min) * g) / gridCount;
+  const decimals = step < 1 ? 1 : 0;
+  for (let value = min; value <= max + step / 2; value += step) {
     const y = yAt(value);
     ctx.beginPath();
     ctx.moveTo(padding.left, y);
@@ -328,7 +377,7 @@ function drawLineChart(canvas, points, unit) {
     ctx.stroke();
   });
 
-  // ホバー用に描画情報を覚えておく
+  // ツールチップ用に描画情報を覚えておく
   chartStates.set(canvas, {
     points,
     unit,
@@ -337,40 +386,68 @@ function drawLineChart(canvas, points, unit) {
   });
 }
 
-// ツールチップ（マウスに一番近い点の日付と値を出す）
+// ツールチップ（マウス・指に一番近い点の日付と値を出す）
 const tooltip = $('#chart-tooltip');
+const marker = $('#chart-marker');
 
-function attachChartHover(canvas) {
-  canvas.addEventListener('mousemove', (event) => {
-    const state = chartStates.get(canvas);
-    if (!state) return;
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = event.clientX - rect.left;
-    let nearest = 0;
-    state.xs.forEach((x, i) => {
-      if (Math.abs(x - mouseX) < Math.abs(state.xs[nearest] - mouseX)) nearest = i;
-    });
-    const point = state.points[nearest];
-    tooltip.innerHTML = '';
-    const dateSpan = document.createElement('span');
-    dateSpan.className = 'tip-date';
-    dateSpan.textContent = `${point.date} `;
-    const valueSpan = document.createElement('span');
-    valueSpan.className = 'tip-value';
-    valueSpan.textContent = `${point.value.toLocaleString()}${state.unit}`;
-    tooltip.append(dateSpan, valueSpan);
-    tooltip.hidden = false;
-    tooltip.style.left = `${rect.left + state.xs[nearest] + 12}px`;
-    tooltip.style.top = `${rect.top + state.ys[nearest] - 36}px`;
+function hideTooltip() {
+  tooltip.hidden = true;
+  marker.hidden = true;
+}
+
+function showTooltip(canvas, clientX) {
+  const state = chartStates.get(canvas);
+  if (!state) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = clientX - rect.left;
+  let nearest = 0;
+  state.xs.forEach((px, i) => {
+    if (Math.abs(px - x) < Math.abs(state.xs[nearest] - x)) nearest = i;
   });
-  canvas.addEventListener('mouseleave', () => {
-    tooltip.hidden = true;
+  const point = state.points[nearest];
+
+  const dateSpan = document.createElement('span');
+  dateSpan.className = 'tip-date';
+  dateSpan.textContent = `${point.date} `;
+  const valueSpan = document.createElement('span');
+  valueSpan.className = 'tip-value';
+  valueSpan.textContent = `${point.value.toLocaleString()}${state.unit}`;
+  tooltip.replaceChildren(dateSpan, valueSpan);
+  tooltip.hidden = false;
+
+  // 選んだ点を強調する
+  const pointX = rect.left + state.xs[nearest];
+  const pointY = rect.top + state.ys[nearest];
+  marker.hidden = false;
+  marker.style.left = `${pointX}px`;
+  marker.style.top = `${pointY}px`;
+
+  // 画面の右端からはみ出す場合は点の左側に出す
+  const width = tooltip.offsetWidth;
+  let left = pointX + 12;
+  if (left + width > window.innerWidth - 8) left = pointX - width - 12;
+  tooltip.style.left = `${Math.max(8, left)}px`;
+  tooltip.style.top = `${pointY - 44}px`;
+}
+
+function attachChartTooltip(canvas) {
+  // pointer イベントはマウスでもタッチでも同じように届く
+  canvas.addEventListener('pointerdown', (event) => showTooltip(canvas, event.clientX));
+  canvas.addEventListener('pointermove', (event) => showTooltip(canvas, event.clientX));
+  canvas.addEventListener('pointerleave', (event) => {
+    if (event.pointerType === 'mouse') hideTooltip();
   });
 }
 
 ['#chart-max-weight', '#chart-volume', '#chart-body-weight'].forEach((id) =>
-  attachChartHover($(id))
+  attachChartTooltip($(id))
 );
+
+// グラフ以外をタップしたり、スクロールしたりしたらツールチップを閉じる
+document.addEventListener('pointerdown', (event) => {
+  if (!event.target.closest('canvas')) hideTooltip();
+});
+window.addEventListener('scroll', hideTooltip, { passive: true });
 
 // ---- グラフタブ ----
 
@@ -428,13 +505,9 @@ weightForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   weightError.hidden = true;
   try {
-    await api('/api/weights', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        date: $('#weight-date').value,
-        weight: Number($('#weight-value').value),
-      }),
+    await sendJson('/api/weights', 'POST', {
+      date: $('#weight-date').value,
+      weight: Number($('#weight-value').value),
     });
     $('#weight-value').value = '';
     await renderWeightTab();
@@ -490,11 +563,22 @@ async function renderWeightTab() {
 
 // 画面サイズが変わったら表示中のグラフを描き直す
 window.addEventListener('resize', () => {
+  if (appView.hidden) return;
   if ($('#tab-graph').classList.contains('active')) renderGraphCharts();
   if ($('#tab-weight').classList.contains('active')) renderWeightTab();
 });
 
 // ---- 初期表示 ----
 
-renderTodayList();
-refreshExerciseList();
+// ログインが必要か・ログイン済みかをサーバーに聞いて、表示する画面を決める
+async function start() {
+  const session = await api('/api/session');
+  authRequired = session.authRequired;
+  if (session.loggedIn) {
+    showApp();
+  } else {
+    showLogin();
+  }
+}
+
+start();

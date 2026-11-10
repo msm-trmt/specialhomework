@@ -1,6 +1,7 @@
 /* 筋トレ記録アプリのスタイル */
 
 :root {
+  color-scheme: light;
   --page: #f9f9f7;
   --surface: #fcfcfb;
   --text-primary: #0b0b0b;
@@ -15,6 +16,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
     --page: #0d0d0d;
     --surface: #1a1a19;
     --text-primary: #ffffff;
@@ -32,8 +34,14 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
+  /* iPhone のノッチやホームバーに中身が隠れないようにする */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
   background: var(--page);
   color: var(--text-primary);
@@ -41,8 +49,24 @@ body {
 }
 
 .app-header {
+  position: relative;
   padding: 16px;
   text-align: center;
+}
+
+.logout-button {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.login-card {
+  max-width: 400px;
+  margin: 24px auto;
 }
 
 .app-header h1 {
@@ -188,9 +212,29 @@ button.primary {
   border-radius: 8px;
 }
 
+/* 種目名と「重量×回数×セット」を2段に分け、ボタンは右側にまとめる */
+.workout-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "name    buttons"
+    "detail  buttons";
+  column-gap: 8px;
+}
+
 .workout-item .exercise {
+  grid-area: name;
   font-weight: 600;
-  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.workout-item .detail {
+  grid-area: detail;
+  font-size: 0.9rem;
+}
+
+.workout-item .item-buttons {
+  grid-area: buttons;
 }
 
 .workout-item .detail, .weight-item .detail {
@@ -208,7 +252,8 @@ button.primary {
 }
 
 .item-buttons button {
-  padding: 4px 10px;
+  min-height: 36px;
+  padding: 6px 12px;
   font-size: 0.85rem;
 }
 
@@ -244,6 +289,21 @@ button.primary {
   display: block;
   width: 100%;
   height: 220px;
+  /* 縦スクロールはそのまま、横に指を動かすとツールチップが追いかける */
+  touch-action: pan-y;
+}
+
+.chart-marker {
+  position: fixed;
+  z-index: 9;
+  pointer-events: none;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: var(--series-1);
+  border: 3px solid var(--surface);
+  box-shadow: 0 0 0 2px var(--series-1);
 }
 
 .chart-tooltip {
